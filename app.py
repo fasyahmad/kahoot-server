@@ -305,7 +305,6 @@ def encrypt(secretMessage):
 
 # decrypt passwor======================================
 
-
 def decrypt(secretMessage):
   chars = "abcdefghijklmnopqrstuvwxyz0123456789"
   listCharts = list(chars)
@@ -320,6 +319,33 @@ def decrypt(secretMessage):
     changeChar = (indexChar-chaisarMove) % len(chars)
     listSecretMessage[i] = listCharts[changeChar]
   return "".join(listSecretMessage)
+
+# # ini delete Quizze
+# @app.route('/quizzes/<quizId>', methods=["DELETE", "PUT"])
+
+
+# def updateDeleteQuiz(quizId):
+#     if request.method == "DELETE":
+#         return deleteQuiz(quizId)
+#     elif request.method == "PUT":
+#         return updateQuiz(quizId)
+
+
+# def deleteQuiz(quizId):
+
+#     # nyari soalnya
+#     questionsFile = open('./question-file.json')
+#     questionsData = json.load(questionsFile)
+
+#     for i in range(len(quizData["quizzes"])):
+#         quiz = quizData["quizzes"][i]
+
+#         if quiz["quiz-id"] == int(quizId):
+#             del quizData["quizzes"][i]  # hapus quiz
+#             quizData["totalQuizAvailable"] -= 1
+#             break
+
+#     return jsonify(quizData)
 
 # if name == "__main__":
 # app.run(debug=True, port=14045)
