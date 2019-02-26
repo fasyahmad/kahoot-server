@@ -8,7 +8,7 @@ app = Flask(__name__)
 # bikin kuis baru
 @app.route('/quiz', methods=['POST'])
 def createQuiz():
-    body = json.dumps(request.json)
+    body = request.json
 
     quizData = {
         "totalQuizAvailable": 0,
@@ -27,12 +27,12 @@ def createQuiz():
     quizzesFile = open('./quizzes-file.json', 'w')
     quizzesFile.write(str(json.dumps(quizData)))
 
-    return str(quizData)
+    return jsonify(quizData)
 
 # bikin soal untuk kuis yang udah ada
 @app.route('/question', methods=['POST'])
 def createQuestion():
-    body = json.dumps(request.json)
+    body = request.json  # untuk merubah dari ('') menjadi ("")
 
     questionData = {
         "questions": []
@@ -50,8 +50,8 @@ def createQuestion():
     questionData["questions"].append(body)
     questionFile.write(str(json.dumps(questionData)))
 
-    return str(questionData)
-    
+    return jsonify(questionData)
+
 # meminta data kuis dan soalnya
 @app.route('/quizzes/<quizId>')  # kalau gaada methodnya itu defaulnya ["GET"]
 def getQuiz(quizId):
@@ -60,7 +60,7 @@ def getQuiz(quizId):
     quizzesData = json.load(quizzesFile)  # kalo load itu dari file
 
     for quiz in quizzesData["quizzes"]:
-        quiz = json.loads(quiz)  # sedangkan loads itu dari string
+        # quiz = json.loads(quiz)  # sedangkan loads itu dari string
         if quiz["quiz-id"] == int(quizId):
             quizData = quiz
             break
@@ -70,7 +70,7 @@ def getQuiz(quizId):
     questionsData = json.load(questionsFile)
 
     for question in questionsData["questions"]:
-        question = json.loads(question)
+        # question = json.loads(question)
         if question["quiz-id"] == int(quizId):
             quizData["question-list"].append(question)
 
@@ -96,7 +96,7 @@ def createGame():
     quizzesData = json.load(quizzesFile)
 
     for quiz in quizzesData["quizzes"]:
-        quiz = json.loads(quiz)
+        # quiz = json.loads(quiz)
 
         if quiz["quiz-id"] == int(body["quiz-id"]):
             gameInfo = quiz
@@ -140,8 +140,10 @@ def joinGame():
         if game["game-pin"] == int(body["game-pin"]):
             if body["username"] not in game["user-list"]:
                 game["user-list"].append(body["username"])
-                game["leaderboard"].append(
-                    {"username": body["username"], "score": 0})
+                game["leaderboard"].append({
+                    "username": body["username"],
+                    "score": 0
+                })
                 gameInfo = game
                 position = i
                 break
@@ -173,7 +175,7 @@ def submitAnswer():
     questionsData = json.load(questionsFile)
 
     for question in questionsData["questions"]:
-        question = json.loads(question)
+        # question = json.loads(question)
 
         if question["quiz-id"] == int(body["quiz-id"]) and question["question-number"] == int(body["question-number"]):
             if question["answer"] == body["answer"]:
@@ -234,9 +236,9 @@ def getLeaderboard():
     return jsonify(leaderboard)
 
 
-# Member Register ======================================
+# Register user
 @app.route('/register', methods=['POST'])
-def creatAccount():
+def register():
     body = request.json
 
     if body["skidipaw"] == "encrypt":
@@ -244,28 +246,27 @@ def creatAccount():
     elif body["skidipaw"] == "decrypt":
         body["password"] == decrypt(body["password"])
 
-    registerAccountData = {
-        "registerAccount": []
+    userData = {
+        "userList": []
     }
 
-    if os.path.exists('./registerAccount-file.json'):
-        registerAccountFile = open('./registerAccount-file.json', 'r')
-        registerAccountData = json.load(registerAccountFile)
+    if os.path.exists('./users-file.json'):
+        userFile = open('./users-file.json', 'r')
+        userData = json.load(userFile)
     else:
-        registerAccountFile = open('./registerAccount-file.json', 'x')
+        userFile = open('./users-file.json', 'x')
 
-    # quizData["totalQuizAvailable"] += 1
-    registerAccountData["registerAccount"].append(body)
+    userData["userList"].append(body)
 
-    registerAccountFile = open('./registerAccount-file.json', 'w')
-    registerAccountFile.write(str(json.dumps(registerAccountData)))
+    userFile = open('./users-file.json', 'w')
+    userFile.write(str(json.dumps(userData)))
 
-    return str(registerAccountData)
+    return jsonify(userData)
 
 
-# Member log-in ======================================
-@app.route('/log-in', methods=["POST"])
-def logIn():
+# Login user
+@app.route('/login', methods=["POST"])
+def login():
     body = request.json
 
     if body["skidipaw"] == "encrypt":
@@ -273,84 +274,141 @@ def logIn():
     elif body["skidipaw"] == "decrypt":
         body["password"] == decrypt(body["password"])
 
-    # buka file yang udah register ========================
-    registerAccountFile = open('./registerAccount-file.json')
-    registerAccountData = json.load(registerAccountFile)
-    # cari account yang udah register =====================
-    for i in range(len(registerAccountData["registerAccount"])):
-        userAccount = registerAccountData["registerAccount"][i]
-        if userAccount["username"] == body["username"]:
-            if userAccount["password"] == body["password"]:
-                return 'selamat anda berhak mendapatkan account anda'
+    # buka file yang udah register
+    userFile = open('./users-file.json')
+    userData = json.load(userFile)
+
+    result = ""
+    # cari user yang udah register
+    for i in range(len(userData["userList"])):
+        registeredUser = userData["userList"][i]
+        if registeredUser["username"] == body["username"]:
+            if registeredUser["password"] == body["password"]:
+                result = "Selamat anda berhasil login"
                 break
             else:
-                return "semudah itu kamu melupakanku"
+                result = "Password anda salah"
+
+    return result
 
 
-# encrypt passwor======================================
-chaisarMove = 2
+# Encrypt password
+caesarMove = 2
 
 
-def encrypt(secretMessage):
+def encrypt(password):
   chars = "abcdefghijklmnopqrstuvwxyz0123456789"
-  listCharts = list(chars)
+  listChars = list(chars)
 
-  listSecretMessage = list(secretMessage)
-#   print(listCharts)
-#   print("=============")
-#   print(listSecretMessage)
+  listPassword = list(password)
 
-  for i in range(len(listSecretMessage)):
-    indexChar = listCharts.index(listSecretMessage[i])
-    changeChar = (indexChar+chaisarMove) % len(chars)
-    listSecretMessage[i] = listCharts[changeChar]
-  return "".join(listSecretMessage)
+  for i in range(len(listPassword)):
+    indexChar = listChars.index(listPassword[i])
+    changeChar = (indexChar + caesarMove) % len(chars)
+    listPassword[i] = listChars[changeChar]
+  return "".join(listPassword)
 
 
-# decrypt passwor======================================
-
-def decrypt(secretMessage):
+# Decrypt password
+def decrypt(password):
   chars = "abcdefghijklmnopqrstuvwxyz0123456789"
-  listCharts = list(chars)
+  listChars = list(chars)
 
-  listSecretMessage = list(secretMessage)
-#   print(listCharts)
-#   print("=============")
-#   print(listSecretMessage)
+  listPassword = list(password)
 
-  for i in range(len(listSecretMessage)):
-    indexChar = listCharts.index(listSecretMessage[i])
-    changeChar = (indexChar-chaisarMove) % len(chars)
-    listSecretMessage[i] = listCharts[changeChar]
-  return "".join(listSecretMessage)
+  for i in range(len(listPassword)):
+    indexChar = listChars.index(listPassword[i])
+    changeChar = (indexChar - caesarMove) % len(chars)
+    listPassword[i] = listChars[changeChar]
+  return "".join(listPassword)
 
-# # ini delete Quizze
-# @app.route('/quizzes/<quizId>', methods=["DELETE", "PUT"])
+  #update dan delete quiz
 
 
-# def updateDeleteQuiz(quizId):
-#     if request.method == "DELETE":
-#         return deleteQuiz(quizId)
-#     elif request.method == "PUT":
-#         return updateQuiz(quizId)
+@app.route('/quizzes/<quizId>', methods=["DELETE"])
+def deleteQuiz(quizId):
+
+    # nyari quiznya
+    quizzesFile = open('./quizzes-file.json')
+    quizzesData = json.load(quizzesFile)
+
+    for i in range(len(quizzesData["quizzes"])):
+        if quizzesData["quizzes"][i]["quiz-id"] == int(quizId):
+            quizzesData["quizzes"].pop(i)
+            quizzesData["total-quiz-available"] -= 1
+            break
+
+    with open('./quizzes-file.json', 'w') as quizzesFile:
+        quizzesFile.write(str(json.dumps(quizzesData)))
+
+    return jsonify(quizzesData)
 
 
-# def deleteQuiz(quizId):
+@app.route('/quizzes/<quizId>', methods=["PUT"])
+def upadateQuiz(quizId):
+    body = request.json
 
-#     # nyari soalnya
-#     questionsFile = open('./question-file.json')
-#     questionsData = json.load(questionsFile)
+    quizzesFile = open('./quizzes-file.json')
+    quizzesData = json.load(quizzesFile)
 
-#     for i in range(len(quizData["quizzes"])):
-#         quiz = quizData["quizzes"][i]
+    for i in range(len(quizzesData["quizzes"])):
+        if quizzesData["quizzes"][i]["quiz-id"] == int(quizId):
+            quizzesData["quizzes"][i]["quiz-category"] = body["quiz-category"]
+            quizzesData["quizzes"][i]["quiz-name"] = body["quiz-name"]
+            break
 
-#         if quiz["quiz-id"] == int(quizId):
-#             del quizData["quizzes"][i]  # hapus quiz
-#             quizData["totalQuizAvailable"] -= 1
-#             break
+    with open('./quizzes-file.json', 'w') as quizzesFile:
+        quizzesFile.write(str(json.dumps(quizzesData)))
 
-#     return jsonify(quizData)
+    return jsonify(quizzesData)
+
+
+@app.route('/quizzes/<quizId>/question/<questionNumber>', methods=["DELETE"])
+def deleteThatQuestion(quizId, questionNumber):
+
+    # nyari quiznya
+    questionFile = open('./question-file.json')
+    questionData = json.load(questionFile)
+
+    for i in range(len(questionData["questions"])):
+        if questionData["questions"][i]["question-number"] == int(questionNumber):
+            if questionData["questions"][i]["quiz-id"] == int(quizId):
+                del questionData["questions"][i]
+
+            break
+
+    with open('./question-file.json', 'w') as questionFile:
+        questionFile.write(str(json.dumps(questionData)))
+
+    return jsonify(questionData)
+
+
+@app.route('/quizzes/<quizId>/question2/<questionNumber>', methods=["PUT"])
+def updateThatQuestion(quizId, questionNumber):
+    body = request.json
+
+    # nyari quiznya
+    questionFile = open('./question-file.json')
+    questionData = json.load(questionFile)
+
+    for i in range(len(questionData["questions"])):
+        if questionData["questions"][i]["question-number"] == int(questionNumber):
+            if questionData["questions"][i]["quiz-id"] == int(quizId):
+                questionData["questions"][i]["question-number"] = body["question-number"]
+                questionData["questions"][i]["question"] = body["question"]
+                questionData["questions"][i]["answer"] = body["answer"]
+                questionData["questions"][i]["option-list"]["A"] = body["option-list"]["A"]
+                questionData["questions"][i]["option-list"]["B"] = body["option-list"]["B"]
+                questionData["questions"][i]["option-list"]["C"] = body["option-list"]["C"]
+                questionData["questions"][i]["option-list"]["D"] = body["option-list"]["D"]
+
+            break
+
+    with open('./question-file.json', 'w') as questionFile:
+        questionFile.write(str(json.dumps(questionData)))
+
+    return jsonify(questionData)
+
 
 # if name == "__main__":
-# app.run(debug=True, port=14045)
-#coba rubah dikit tjoy
+#     app.run(debug=True, port=14045)
