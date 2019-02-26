@@ -239,6 +239,7 @@ def getLeaderboard():
 # Register user
 @app.route('/register', methods=['POST'])
 def register():
+    print(os.getenv("API_KEY"))
     body = request.json
 
     if body["skidipaw"] == "encrypt":
@@ -411,4 +412,4 @@ def updateThatQuestion(quizId, questionNumber):
 
 
 # if name == "__main__":
-#     app.run(debug=True, port=14045)
+# app.run(debug=True, port=14045)
